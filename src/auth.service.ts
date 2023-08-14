@@ -1,18 +1,15 @@
+/* eslint-disable no-var */
 /* eslint-disable prettier/prettier */
-import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import { CreateUserDto } from './dto/create-user.dto';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import User from './authentication/entity/user.entity';
 
-@Controller()
+@Injectable()
 export class AuthService {
-  @GrpcMethod()
-  createUser() {
-    return { status: 200 };
-  }
+  constructor(
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) { }
 
-  @GrpcMethod()
-  getAllUser(params: CreateUserDto) {
-    console.log(params)
-    return { users: [{ email: "begin270519@gmail.com", password: "123445" }] }
-  }
 }
