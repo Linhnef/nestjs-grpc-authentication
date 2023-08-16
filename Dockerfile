@@ -37,6 +37,7 @@ COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modul
 COPY --chown=node:node . .
 
 # Run the build command which creates the production bundle
+RUN apk add --no-cache python3 py3-pip
 RUN npm run build
 
 # Set NODE_ENV environment variable
