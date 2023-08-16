@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { ConfigModule } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import User from './authentication/entity/user.entity';
+import User from './authentication/entity/token';
 import { AuthenticationModule } from './authentication/authentication.module';
 
 @Module({

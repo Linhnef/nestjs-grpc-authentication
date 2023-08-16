@@ -12,7 +12,7 @@ import { SignInDTO } from '../dto/sign-in.dto';
 import { config } from 'dotenv';
 import { toQueryString } from 'src/utils/string';
 import { GetUser } from '../decorator/get-user.decorator';
-import User from '../entity/user.entity';
+import User from '../entity/token';
 
 config();
 
@@ -49,7 +49,6 @@ export class AuthenticationController implements AuthServiceController {
     @Get('/me')
     @UseGuards(AuthGuard('jwt'))
     async me(@GetUser() user: User) {
-        console.log(user)
         return await this.authService.refreshToken(user)
     }
 

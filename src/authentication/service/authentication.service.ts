@@ -5,7 +5,7 @@ import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@n
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import User from '../entity/user.entity';
+import User from '../entity/token';
 import { google } from 'googleapis';
 import { JwtPayload } from '../dto/jwt-payload.dto';
 import { SignInDTO } from '../dto/sign-in.dto';
