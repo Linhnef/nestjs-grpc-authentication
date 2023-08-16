@@ -6,9 +6,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import User from '../entity/user.entity';
-import { SignUpDTO } from '../dto/sign-up.dto';
 import { google } from 'googleapis';
 import { JwtPayload } from '../dto/jwt-payload.dto';
+import { SignInDTO } from '../dto/sign-in.dto';
 
 
 @Injectable()
@@ -28,14 +28,7 @@ export class AuthenticationService {
         const jwtToken: string = await this.jwtService.sign(payload);
 
         if (!!existed) {
-            existed.refreshToken = refreshToken
-            existed.accessToken = accessToken
-
-            await this.authenticationRepository.save(existed)
-
-            const { refreshToken: _, ...props } = existed
-
-            return { ...props, jwtToken, existed: true }
+            return { existed: true }
         } else {
             const newUser = await this.authenticationRepository.create({
                 email: email,
@@ -52,6 +45,33 @@ export class AuthenticationService {
         }
     }
 
+    async signIn(param: SignInDTO) {
+        const { accessToken } = param
+
+        const OAuth2 = google.auth.OAuth2;
+        const oauth2Client = new OAuth2()
+        oauth2Client.setCredentials({ access_token: accessToken });
+
+        var oauth2 = google.oauth2({
+            auth: oauth2Client,
+            version: 'v2'
+        });
+
+        const user = await oauth2.userinfo.get();
+
+        const existed = await this.authenticationRepository.findOne({ where: { email: user.data.email } })
+
+        if (!existed) throw new HttpException('User Not Found !!!', HttpStatus.NOT_FOUND);
+
+        const payload: JwtPayload = { email: user.data.email };
+        const jwtToken: string = await this.jwtService.sign(payload);
+
+        const { refreshToken: _, ...props } = existed
+
+        return { ...props, jwtToken }
+
+    }
+
     async refreshToken(user: User) {
 
         const OAuth2 = google.auth.OAuth2;
@@ -59,8 +79,8 @@ export class AuthenticationService {
         const oauth2Client = new OAuth2()
 
         oauth2Client.setCredentials({ refresh_token: user.refreshToken, access_token: user.accessToken });
-        const refreshToken = await oauth2Client.refreshAccessToken()
 
+        const refreshToken = await oauth2Client.refreshAccessToken()
 
         const existed = await this.authenticationRepository.findOne({ where: { email: user.email } })
 
