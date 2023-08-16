@@ -1,0 +1,32 @@
+name: Main workflow
+on:
+  push:
+    branches:
+      - staging
+env:
+  WORKSPACE: ${{ vars.WORKSPACE_STAGING }}
+
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: 
+      labels: ["self-hosted", "staging", "gradient"]
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $WORKSPACE, so your job can access it
+      - name: Checkout repository
+        run: |
+          cd $WORKSPACE/${{ vars.PROJECT_NAME }}
+          git config credential.helper '!f() { sleep 1; echo "username=${{ secrets.GH_USER }}"; echo "password=${{ secrets.GH_TOKEN }}"; }; f'
+          git checkout staging
+          git pull
+
+      - name: Build new image
+        run: |
+          cd $WORKSPACE/
+          docker compose build ${{ vars.PROJECT_NAME }} 
+
+      - name: Rollout new image
+        run: |
+          cd $WORKSPACE/
+          docker compose up -d ${{ vars.PROJECT_NAME }}
