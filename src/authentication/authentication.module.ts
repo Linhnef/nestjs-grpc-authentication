@@ -9,6 +9,7 @@ import { AuthenticationController } from './controller/authentication.controller
 import { JwtStategy } from './service/jwt.stategy';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { GoogleStrategy } from './service/google.stategy';
 
 @Module({
     imports: [
@@ -32,7 +33,7 @@ import { join } from 'path';
         ])
     ],
     controllers: [AuthenticationController],
-    providers: [AuthenticationService, JwtStategy],
+    providers: [AuthenticationService, GoogleStrategy, JwtStategy],
     exports: [PassportModule, JwtStategy]
 })
 export class AuthenticationModule { }
