@@ -12,7 +12,7 @@ import { SignInDTO } from '../dto/sign-in.dto';
 import { config } from 'dotenv';
 import { toQueryString } from 'src/utils/string';
 import { GetUser } from '../decorator/get-user.decorator';
-import User from '../entity/user.entity';
+import { User } from '../service/grpc-user-service';
 
 config();
 
@@ -46,11 +46,10 @@ export class AuthenticationController implements AuthServiceController {
         return await this.authService.signIn(params)
     }
 
-    @Get('/me')
+    @Get('me')
     @UseGuards(AuthGuard('jwt'))
     async me(@GetUser() user: User) {
-        console.log(user)
-        return await this.authService.refreshToken(user)
+        return await this.authService.me(user)
     }
 
     @GrpcMethod()
@@ -63,7 +62,5 @@ export class AuthenticationController implements AuthServiceController {
     async welcome() {
         return 'welcome !'
     }
-
-
 
 }

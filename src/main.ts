@@ -26,12 +26,11 @@ async function bootstrap() {
   });
 
   // microservices
-
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
-      package: 'user',
-      protoPath: join(process.cwd(), 'dist/protos/rpc/user.proto'),
+      package: 'auth',
+      protoPath: join(process.cwd(), 'dist/protos/rpc/auth.proto'),
       url: configService.get('AUTH_GRPC_CONNECTION_URL'),
     },
   });

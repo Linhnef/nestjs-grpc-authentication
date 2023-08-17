@@ -2,8 +2,8 @@
 /* eslint-disable prettier/prettier */
 import { Observable } from "rxjs";
 import { JwtPayload } from "../dto/jwt-payload.dto";
-import User from "../entity/user.entity";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
+import { User } from "./grpc-user-service";
 
 export interface GrpcAuthService {
     validate(request: JwtPayload): Observable<User>;

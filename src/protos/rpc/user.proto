@@ -4,8 +4,10 @@ syntax = "proto3";
 
 package user;
 
-service AuthService {
-  rpc validate (Request) returns (User);
+service UserService {
+  rpc getUser (JwPayload) returns (User);
+  rpc createUser (CreateUserRequest) returns (User);
+  rpc updateUser (UpdateUserRequest) returns (User);
 }
 
 message User {
@@ -14,9 +16,24 @@ message User {
   string email = 3;
   string id = 4;
   bool isEnable2fa = 5;
-  string accessToken = 6;
+  bool isOnboarding = 6;
 }
 
-message Request {
+message CreateUserRequest {
+  string username = 1;
+  string avatar = 2;
+  string email = 3;
+}
+
+message UpdateUserRequest {
+  string username = 1;
+  string avatar = 2;
+  string email = 3;
+  string id = 4;
+  bool isEnable2fa = 5;
+  bool isOnboarding = 6;
+}
+
+message JwPayload {
   string email = 1;
 }
