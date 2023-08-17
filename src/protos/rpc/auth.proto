@@ -2,7 +2,7 @@
 
 syntax = "proto3";
 
-package user;
+package auth;
 
 service AuthService {
   rpc validate (Request) returns (User);

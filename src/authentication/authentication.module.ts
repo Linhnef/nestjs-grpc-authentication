@@ -26,8 +26,19 @@ import { GoogleStrategy } from './service/google.stategy';
                 name: 'AUTH_SERVICE',
                 transport: Transport.GRPC,
                 options: {
+                    package: 'auth',
+                    protoPath: join(process.cwd(), 'dist/protos/rpc/auth.proto')
+                },
+            },
+        ]),
+        ClientsModule.register([
+            {
+                name: 'USER_SERVICE',
+                transport: Transport.GRPC,
+                options: {
                     package: 'user',
-                    protoPath: join(process.cwd(), 'src/authentication/protos/rpc/user.proto')
+                    protoPath: join(process.cwd(), 'dist/protos/rpc/user.proto'),
+                    url: process.env.USER_GRPC_CONNECTION_URL
                 },
             },
         ])

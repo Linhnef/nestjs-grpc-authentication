@@ -1,47 +1,61 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-var */
 /* eslint-disable prettier/prettier */
-import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import User from '../entity/token';
+import Token from '../entity/token';
 import { google } from 'googleapis';
 import { JwtPayload } from '../dto/jwt-payload.dto';
 import { SignInDTO } from '../dto/sign-in.dto';
+import { ClientGrpc } from '@nestjs/microservices';
+import { GrpcUserService, User } from './grpc-user-service';
+import { firstValueFrom } from 'rxjs';
 
 
 @Injectable()
-export class AuthenticationService {
+export class AuthenticationService implements OnModuleInit {
+    private grpcUserService: GrpcUserService;
     constructor(
-        @InjectRepository(User)
-        private authenticationRepository: Repository<User>,
+        @InjectRepository(Token)
+        private tokenRepository: Repository<Token>,
         private jwtService: JwtService,
+        @Inject('USER_SERVICE')
+        private grpcClient: ClientGrpc,
     ) { }
+
+    onModuleInit() {
+        this.grpcUserService = this.grpcClient.getService<GrpcUserService>('UserService');
+    }
 
     // &access_type=offline&prompt=consent
     async googleAuth(req) {
         const { refreshToken, accessToken, email, name, picture } = req.user
-        const existed = await this.authenticationRepository.findOne({ where: { email: email } })
 
+        const existed = await firstValueFrom(this.grpcUserService.getUser({
+            email: email,
+        }))
         const payload: JwtPayload = { email: email };
         const jwtToken: string = await this.jwtService.sign(payload);
 
-        if (!!existed) {
+        if (existed.exited) {
             return { existed: true }
         } else {
-            const newUser = await this.authenticationRepository.create({
+            const newUser = await firstValueFrom(this.grpcUserService.createUser({
                 email: email,
-                avatar: picture,
                 username: name,
-                accessToken: accessToken,
-                refreshToken: refreshToken,
-            })
+                avatar: picture
+            }))
 
-            await this.authenticationRepository.save(newUser);
+            const token = new Token()
+            token.accessToken = accessToken;
+            token.refreshToken = refreshToken;
+            token.userId = newUser.id;
 
-            const { refreshToken: _, ...props } = newUser
-            return { ...props, jwtToken, existed: false }
+            await this.tokenRepository.save(token);
+
+            return { ...newUser, jwtToken, existed: false }
         }
     }
 
@@ -59,37 +73,37 @@ export class AuthenticationService {
 
         const user = await oauth2.userinfo.get();
 
-        const existed = await this.authenticationRepository.findOne({ where: { email: user.data.email } })
+        const existed = await firstValueFrom(this.grpcUserService.getUser({
+            email: user.data.email,
+        }))
 
         if (!existed) throw new HttpException('User Not Found !!!', HttpStatus.NOT_FOUND);
 
         const payload: JwtPayload = { email: user.data.email };
         const jwtToken: string = await this.jwtService.sign(payload);
 
-        const { refreshToken: _, ...props } = existed
-
-        return { ...props, jwtToken }
-
+        return { ...existed, jwtToken }
     }
 
     async refreshToken(user: User) {
+
+        const existed = await this.tokenRepository.findOne({ where: { userId: user.id } })
+
+        if (!existed) throw new HttpException('User Not Found !!!', HttpStatus.NOT_FOUND);
 
         const OAuth2 = google.auth.OAuth2;
 
         const oauth2Client = new OAuth2()
 
-        oauth2Client.setCredentials({ refresh_token: user.refreshToken, access_token: user.accessToken });
+        oauth2Client.setCredentials({ refresh_token: existed.refreshToken, access_token: existed.accessToken });
 
         const refreshToken = await oauth2Client.refreshAccessToken()
 
-        const existed = await this.authenticationRepository.findOne({ where: { email: user.email } })
-
-        if (!existed) throw new HttpException('User Not Found !!!', HttpStatus.NOT_FOUND);
 
         existed.refreshToken = refreshToken.credentials.refresh_token
         existed.accessToken = refreshToken.credentials.access_token
 
-        await this.authenticationRepository.save(existed)
+        await this.tokenRepository.save(existed)
 
         const payload: JwtPayload = { email: user.email };
         const jwtToken: string = await this.jwtService.sign(payload);
@@ -97,13 +111,31 @@ export class AuthenticationService {
         return { ...existed, jwtToken }
     }
 
+    async me(user: User) {
+        const payload: JwtPayload = { email: user.email };
+        const jwtToken: string = await this.jwtService.sign(payload);
+        return { ...user, jwtToken }
+    }
+
     async validate(payload: JwtPayload) {
         const { email } = payload;
-        const user: User = await this.authenticationRepository.findOne({ where: { email } });
+        const user: User = await firstValueFrom(this.grpcUserService.getUser({ email }))
+
         if (!user) {
             throw new UnauthorizedException();
         }
-        return user;
+        const token: Token = await this.tokenRepository.findOne({ where: { userId: user.id } })
+
+        if (!token) {
+            throw new UnauthorizedException();
+        }
+
+        const { refreshToken, userId, created_at, updated_at, ...props } = token
+
+        return {
+            ...user,
+            ...props
+        };
     }
 
 }
